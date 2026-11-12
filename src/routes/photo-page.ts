@@ -53,7 +53,6 @@ footer{font-size:13px;line-height:1.5;color:var(--muted);text-align:center;margi
 `;
 
 const ICON_DOWNLOAD = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 21h14"/></svg>';
-const ICON_SHARE = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 15V3"/><path d="m7 8 5-5 5 5"/><path d="M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-7"/></svg>';
 
 function shell(title: string, head: string, body: string) {
   return `<!doctype html>
@@ -88,27 +87,35 @@ export function renderPhotoPage(d: PhotoPageData): string {
 </div>
 <figure class="photo"><img src="${escape(d.imageUrl)}" alt="Votre photo prise à la borne Manora"></figure>
 <div class="actions">
-  <a class="btn primary" href="${escape(d.imageUrl)}" download="${escape(d.fileName)}">${ICON_DOWNLOAD}Télécharger la photo</a>
-  <button type="button" class="btn secondary" id="share" hidden>${ICON_SHARE}Enregistrer ou partager</button>
+  <a class="btn primary" id="save" href="${escape(d.imageUrl)}" download="${escape(d.fileName)}">${ICON_DOWNLOAD}Enregistrer dans ma galerie</a>
 </div>
-<p class="tip" id="tip-ios" hidden>Sur iPhone : touchez « Enregistrer ou partager », puis « Enregistrer l’image » pour l’ajouter à vos Photos. Vous pouvez aussi faire un appui long sur la photo.</p>
+<p class="tip" id="tip-ios" hidden>Sur iPhone, choisissez ensuite « Enregistrer l’image » : la photo arrive dans vos Photos.</p>
 <footer>Photo prise à la borne Manora Live. Elle est visible par les invités de l’événement ; pour la faire supprimer, adressez-vous à l’organisateur.</footer>
 </main>
 <script>
 (() => {
-  const btn = document.getElementById('share');
-  const url = ${JSON.stringify(d.imageUrl)};
+  // Un seul bouton. Sur téléphone, la feuille de partage avec le fichier propose « Enregistrer l'image »
+  // (iPhone → Photos). Ailleurs, le lien télécharge le fichier (Android : visible dans la galerie).
+  // L'image est préparée dès l'ouverture : sur iPhone, attendre le réseau après le toucher bloque le partage.
+  const save = document.getElementById('save');
   const name = ${JSON.stringify(d.fileName)};
   if (/iPhone|iPad|iPod/.test(navigator.userAgent)) document.getElementById('tip-ios').hidden = false;
-  if (!navigator.share) return;
-  btn.hidden = false;
-  btn.addEventListener('click', async () => {
+  let file = null;
+  fetch(${JSON.stringify(d.imageUrl)})
+    .then((r) => r.blob())
+    .then((blob) => {
+      const f = new File([blob], name, { type: 'image/jpeg' });
+      if (navigator.canShare && navigator.canShare({ files: [f] })) file = f;
+    })
+    .catch(() => {});
+  save.addEventListener('click', async (event) => {
+    if (!file) return; // pas de partage de fichier : le lien télécharge la photo
+    event.preventDefault();
     try {
-      const blob = await (await fetch(url)).blob();
-      const file = new File([blob], name, { type: 'image/jpeg' });
-      if (navigator.canShare && navigator.canShare({ files: [file] })) await navigator.share({ files: [file], title: 'Ma photo Manora' });
-      else await navigator.share({ url: location.href, title: 'Ma photo Manora' });
-    } catch (e) { /* partage annulé */ }
+      await navigator.share({ files: [file] });
+    } catch (e) {
+      if (e && e.name !== 'AbortError') location.href = save.href;
+    }
   });
 })();
 </script>`;

@@ -70,7 +70,8 @@ describe('page de récupération', () => {
     assert.match(page.headers['content-type'] as string, /text\/html/);
     assert.equal(page.headers['x-robots-tag'], 'noindex');
     assert.ok(page.body.includes(`src="${url}"`));
-    assert.ok(page.body.includes('Télécharger la photo'));
+    assert.ok(page.body.includes('Enregistrer dans ma galerie'));
+    assert.ok(!page.body.includes('Enregistrer ou partager'), 'un seul bouton');
     assert.ok(page.body.includes('Mariage de Léa &amp; Tom'), 'nom de l’événement échappé');
   });
 
