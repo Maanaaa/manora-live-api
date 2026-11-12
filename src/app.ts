@@ -20,6 +20,7 @@ import { authRoutes } from './routes/auth.ts';
 import { fleetRoutes } from './routes/fleet.ts';
 import { journalRoutes } from './routes/journal.ts';
 import { keysRoutes } from './routes/keys.ts';
+import { photoPageRoutes } from './routes/photo-page.ts';
 import { photosRoutes } from './routes/photos.ts';
 import { rulesRoutes } from './routes/rules.ts';
 import { terminalRoutes } from './routes/terminal.ts';
@@ -113,7 +114,7 @@ export async function buildApp(config: Config, options: BuildOptions = {}) {
     (socket, request) => hub.add(socket, request.principal!),
   );
 
-  for (const routes of [authRoutes, fleetRoutes, rulesRoutes, usersRoutes, journalRoutes, photosRoutes, keysRoutes, terminalRoutes]) {
+  for (const routes of [authRoutes, fleetRoutes, rulesRoutes, usersRoutes, journalRoutes, photosRoutes, photoPageRoutes, keysRoutes, terminalRoutes]) {
     routes(app, ctx);
   }
 

@@ -27,6 +27,7 @@ export function photosRoutes(app: FastifyInstance, { db, config, hub }: Ctx) {
     id: String(row.id),
     url: `${config.publicUrl}/media/photos/${String(row.id)}.jpg`,
     thumbUrl: `${config.publicUrl}/media/thumbs/${String(row.id)}.jpg`,
+    pageUrl: `${config.publicUrl}/p/${String(row.id)}`,
     source: row.source as Photo['source'],
     authorName: (row.author_name as string | null) ?? null,
     mine: row.author_id === viewer.id,
@@ -82,7 +83,7 @@ export function photosRoutes(app: FastifyInstance, { db, config, hub }: Ctx) {
         summary: 'Envoyer une photo (multipart : `photo` JPEG, `source`)',
         security: secured,
         consumes: ['multipart/form-data'],
-        response: { 200: { type: 'object', properties: { id: { type: 'string' }, url: { type: 'string' } } }, ...errorResponses },
+        response: { 200: { type: 'object', properties: { id: { type: 'string' }, url: { type: 'string' }, pageUrl: { type: 'string' } } }, ...errorResponses },
       },
     },
     async (request) => {
@@ -124,7 +125,8 @@ export function photosRoutes(app: FastifyInstance, { db, config, hub }: Ctx) {
         'host',
         'admin',
       ]);
-      return { id, url: toPhoto(row, author).url };
+      const photo = toPhoto(row, author);
+      return { id, url: photo.url, pageUrl: photo.pageUrl };
     },
   );
 
@@ -148,7 +150,7 @@ export function photosRoutes(app: FastifyInstance, { db, config, hub }: Ctx) {
     },
   );
 
-  // Fichiers publics : `url` est encodée dans le QR de la borne.
+  // Fichiers publics : `pageUrl` (page de récupération) est encodée dans le QR de la borne.
   app.get<{ Params: { kind: 'photos' | 'thumbs'; file: string } }>(
     '/media/:kind/:file',
     {

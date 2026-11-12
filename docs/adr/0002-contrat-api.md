@@ -109,14 +109,14 @@ Event = { id, ts, type: 'reading' | 'joined' | 'online' | 'offline' | 'command' 
 | Méthode | Route | Corps / paramètres | Réponse | Accès |
 | --- | --- | --- | --- | --- |
 | GET | `/photos` | `?after=<id>&mine=1&limit=30` | `Photo[]` (plus récent d'abord ; `after` = photos plus anciennes que cet id ; page de 30 par défaut, page vide = fin) | guest, host, admin |
-| POST | `/photos` | multipart : `photo` (JPEG), `source` (`booth` \| `guest`) | `{ id, url }` | booth, guest |
+| POST | `/photos` | multipart : `photo` (JPEG), `source` (`booth` \| `guest`) | `{ id, url, pageUrl }` | booth, guest |
 | DELETE | `/photos/:id` | — | 204 | auteur, host, admin |
 
 ```ts
-Photo = { id, url, thumbUrl, source: 'booth' | 'guest', authorName: string | null, mine: boolean, createdAt }
+Photo = { id, url, thumbUrl, pageUrl, source: 'booth' | 'guest', authorName: string | null, mine: boolean, createdAt }
 ```
 
-`url` est l'adresse publique de l'image JPEG elle-même (pas une page) : c'est elle qui est encodée dans le QR de la borne, et elle sert à l'affichage plein écran et à l'enregistrement sur le téléphone. `thumbUrl` est une miniature (côté long 480 px).
+`url` est l'adresse publique de l'image JPEG elle-même : elle sert à l'affichage plein écran et à l'enregistrement sur le téléphone. `pageUrl` (`/p/:id`) est la page publique de récupération (photo, boutons Télécharger et Enregistrer / partager) : c'est elle qui est encodée dans le QR de la borne. `thumbUrl` est une miniature (côté long 480 px).
 
 ### Clés d'API des bornes
 
