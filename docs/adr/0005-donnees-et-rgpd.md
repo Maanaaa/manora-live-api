@@ -5,7 +5,7 @@
 
 ## Contexte
 
-L'API stocke des comptes, des mesures de capteurs (présence, température…), un journal d'événements et des photos d'invités. Ces données touchent à la vie privée des clients et des invités ; le sujet demande une durée de conservation.
+L'API stocke des comptes, des mesures de capteurs (présence, état de la prise…), un journal d'événements et des photos d'invités. Ces données touchent à la vie privée des clients et des invités ; le sujet demande une durée de conservation.
 
 ## Décision
 

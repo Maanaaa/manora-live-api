@@ -5,7 +5,7 @@
 
 ## Contexte
 
-Les automatismes (« si présence devant la borne alors compte à rebours », « si la température dépasse 26 °C pendant 5 min alors notifier ») doivent être modifiables depuis le back-office sans redéployer. Le format des règles est fixé par l'ADR 0002. Le sujet demande des tests du moteur.
+Les automatismes (« si présence devant la borne alors compte à rebours », « si la télécommande passe en veille alors éteindre la lumière de la borne ») doivent être modifiables depuis le back-office sans redéployer. Le format des règles est fixé par l'ADR 0002. Le sujet demande des tests du moteur.
 
 ## Décision
 
