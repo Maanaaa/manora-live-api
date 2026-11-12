@@ -1,0 +1,24 @@
+name: Deploy to Portainer
+
+# Redéploie la stack Portainer une fois la CI réussie sur main.
+on:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+    branches: [main]
+
+jobs:
+  deploy:
+    if: github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger Portainer Webhook
+        env:
+          PORTAINER_WEBHOOK_URL: ${{ secrets.PORTAINER_WEBHOOK_URL }}
+        run: |
+          if [ -z "$PORTAINER_WEBHOOK_URL" ]; then
+            echo "PORTAINER_WEBHOOK_URL secret is not set yet. Skipping automatic trigger."
+            exit 0
+          fi
+          echo "Triggering Portainer stack redeployment..."
+          curl -f -s -X POST "$PORTAINER_WEBHOOK_URL" && echo "Deployment successfully triggered!"
