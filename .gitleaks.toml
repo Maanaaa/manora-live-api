@@ -1,0 +1,7 @@
+# Règles par défaut de gitleaks, sans les valeurs factices des tests (secret JWT, clé de terminal de test).
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Valeurs factices des tests"
+paths = ['''^tests/''']
