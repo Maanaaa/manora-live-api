@@ -27,6 +27,21 @@ const GALLERY_STYLE = `
 .toast{position:fixed;left:50%;bottom:90px;transform:translateX(-50%);background:var(--ink);color:#fff;border-radius:999px;padding:10px 18px;font-size:14px;font-weight:700;max-width:90vw;text-align:center}
 #more{margin-top:4px}
 @media (min-width:700px){.grid{grid-template-columns:repeat(4,1fr)}}
+body.noscroll{overflow:hidden}
+.viewer{position:fixed;inset:0;z-index:10;background:#0b1622;color:#fff;display:flex;flex-direction:column}
+.vbar{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:max(12px,env(safe-area-inset-top)) 12px 8px}
+.vbar button{display:flex;align-items:center;gap:6px;background:rgba(255,255,255,.12);color:#fff;border:0;border-radius:999px;padding:10px 16px 10px 12px;font:inherit;font-size:16px;font-weight:700;cursor:pointer}
+.vbar button svg{width:22px;height:22px}
+#vcount{font-size:15px;font-weight:700;color:rgba(255,255,255,.75)}
+.track{flex:1;min-height:0;display:flex;overflow-x:auto;overflow-y:hidden;scroll-snap-type:x mandatory;scrollbar-width:none;-webkit-overflow-scrolling:touch}
+.track::-webkit-scrollbar{display:none}
+.slide{flex:0 0 100%;scroll-snap-align:center;scroll-snap-stop:always;display:flex;align-items:center;justify-content:center;padding:6px 10px}
+.slide img{max-width:100%;max-height:100%;object-fit:contain;border-radius:16px;background:rgba(255,255,255,.05)}
+.nav{display:none}
+@media (hover:hover){.nav{display:flex;position:fixed;top:50%;transform:translateY(-50%);width:48px;height:48px;border-radius:50%;border:0;background:rgba(255,255,255,.14);color:#fff;font-size:30px;line-height:1;align-items:center;justify-content:center;cursor:pointer}.nav.prev{left:16px}.nav.next{right:16px}.nav:disabled{opacity:.25;cursor:default}}
+.vfoot{padding:10px 16px max(16px,env(safe-area-inset-bottom))}
+.vfoot .btn{max-width:520px;margin:0 auto}
+.vbar button:focus-visible,.nav:focus-visible{outline:3px solid #fff;outline-offset:2px}
 `;
 
 const ICON_ADD = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>';
@@ -51,8 +66,18 @@ export function renderGalleryPage(eventName: string, code: string, publicUrl: st
   <label class="btn primary" for="files">${ICON_ADD}Ajouter mes photos</label>
   <input id="files" type="file" accept="image/*" multiple hidden>
 </div>
-<footer>Les photos sont visibles par les invités de l’événement. Touchez une photo pour l’enregistrer dans votre galerie.</footer>
+<footer>Les photos sont visibles par les invités de l’événement. Touchez une photo pour l’afficher en grand, faites défiler et enregistrez celles que vous aimez.</footer>
 </main>
+<div class="viewer" id="viewer" role="dialog" aria-modal="true" aria-label="Photo en grand" hidden>
+  <div class="vbar">
+    <button type="button" id="vback" aria-label="Retour à la galerie"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg>Galerie</button>
+    <span id="vcount" aria-live="polite"></span>
+  </div>
+  <div class="track" id="track"></div>
+  <button type="button" class="nav prev" id="vprev" aria-label="Photo précédente">‹</button>
+  <button type="button" class="nav next" id="vnext" aria-label="Photo suivante">›</button>
+  <div class="vfoot"><button type="button" class="btn primary" id="vsave">Enregistrer dans ma galerie</button></div>
+</div>
 <div class="toast" id="toast" role="status" hidden></div>
 <script>
 (() => {
@@ -87,9 +112,11 @@ export function renderGalleryPage(eventName: string, code: string, publicUrl: st
     throw new Error('auth');
   }
 
+  const byId = new Map();
   function tile(photo, atTop) {
     if (seen.has(photo.id)) return;
     seen.add(photo.id);
+    byId.set(photo.id, photo);
     const a = document.createElement('a');
     a.href = photo.pageUrl || photo.url;
     a.dataset.id = photo.id;
@@ -97,6 +124,7 @@ export function renderGalleryPage(eventName: string, code: string, publicUrl: st
     const img = document.createElement('img');
     img.src = photo.thumbUrl; img.alt = ''; img.loading = 'lazy';
     a.append(img);
+    a.addEventListener('click', (e) => { e.preventDefault(); openViewer([...grid.children].indexOf(a)); });
     if (atTop) { a.className = 'new'; grid.prepend(a); } else grid.append(a);
     $('empty').hidden = true;
   }
@@ -118,7 +146,7 @@ export function renderGalleryPage(eventName: string, code: string, publicUrl: st
     ws.onmessage = (m) => {
       let msg; try { msg = JSON.parse(m.data); } catch { return; }
       if (msg.type === 'photo.created') tile(msg.data, true);
-      if (msg.type === 'photo.deleted') { const el = grid.querySelector('[data-id="' + CSS.escape(msg.data.id) + '"]'); if (el) el.remove(); seen.delete(msg.data.id); }
+      if (msg.type === 'photo.deleted') { const el = grid.querySelector('[data-id="' + CSS.escape(msg.data.id) + '"]'); if (el) el.remove(); seen.delete(msg.data.id); byId.delete(msg.data.id); }
     };
     ws.onclose = () => { setLive(false); attempt++; setTimeout(connect, Math.min(30000, 1000 * 2 ** attempt)); };
   }
@@ -147,6 +175,91 @@ export function renderGalleryPage(eventName: string, code: string, publicUrl: st
       } catch {}
     }
     toast(ok === files.length ? (ok > 1 ? ok + ' photos ajoutées à la galerie' : 'Photo ajoutée à la galerie') : (files.length - ok) + ' photo(s) non envoyée(s), réessayez', 3500);
+  });
+
+  // ---------- Visionneuse : plein écran, défilement horizontal, retour ----------
+  const viewer = $('viewer'), track = $('track');
+  let slides = [], current = 0;
+  const files = new Map(); // fichiers préparés pour la feuille de partage (iPhone)
+
+  function prepare(photo) {
+    if (!photo || files.has(photo.id)) return;
+    files.set(photo.id, null);
+    fetch(photo.url).then((r) => r.blob()).then((blob) => {
+      const f = new File([blob], 'manora-' + photo.id.slice(0, 8) + '.jpg', { type: 'image/jpeg' });
+      files.set(photo.id, navigator.canShare && navigator.canShare({ files: [f] }) ? f : null);
+    }).catch(() => files.delete(photo.id));
+  }
+
+  function show(index) {
+    current = Math.max(0, Math.min(slides.length - 1, index));
+    $('vcount').textContent = (current + 1) + ' / ' + slides.length;
+    $('vprev').disabled = current === 0;
+    $('vnext').disabled = current === slides.length - 1;
+    // Charge la photo affichée et ses voisines en pleine définition.
+    for (const i of [current - 1, current, current + 1]) {
+      const img = track.children[i] && track.children[i].firstElementChild;
+      if (img && img.dataset.src) { img.src = img.dataset.src; delete img.dataset.src; }
+    }
+    prepare(slides[current]);
+  }
+
+  function goTo(index, smooth) {
+    track.scrollTo({ left: index * track.clientWidth, behavior: smooth ? 'smooth' : 'auto' });
+    show(index);
+  }
+
+  function openViewer(index) {
+    slides = [...grid.children].map((a) => byId.get(a.dataset.id)).filter(Boolean);
+    track.replaceChildren(...slides.map((photo) => {
+      const slide = document.createElement('div');
+      slide.className = 'slide';
+      const img = document.createElement('img');
+      img.src = photo.thumbUrl; img.dataset.src = photo.url; img.alt = 'Photo de la soirée';
+      slide.append(img);
+      return slide;
+    }));
+    viewer.hidden = false;
+    document.body.classList.add('noscroll');
+    history.pushState({ viewer: true }, '');
+    requestAnimationFrame(() => goTo(index, false));
+    $('vback').focus();
+  }
+
+  function hideViewer() {
+    viewer.hidden = true;
+    document.body.classList.remove('noscroll');
+  }
+
+  // Le bouton retour (ou le geste retour du téléphone) ferme la visionneuse sans quitter la galerie.
+  $('vback').addEventListener('click', () => (history.state && history.state.viewer ? history.back() : hideViewer()));
+  window.addEventListener('popstate', () => { if (!viewer.hidden) hideViewer(); });
+
+  let scrollTimer;
+  track.addEventListener('scroll', () => {
+    clearTimeout(scrollTimer);
+    scrollTimer = setTimeout(() => show(Math.round(track.scrollLeft / track.clientWidth)), 60);
+  });
+  $('vprev').addEventListener('click', () => goTo(current - 1, true));
+  $('vnext').addEventListener('click', () => goTo(current + 1, true));
+  window.addEventListener('resize', () => { if (!viewer.hidden) goTo(current, false); });
+  document.addEventListener('keydown', (e) => {
+    if (viewer.hidden) return;
+    if (e.key === 'ArrowRight') goTo(current + 1, true);
+    else if (e.key === 'ArrowLeft') goTo(current - 1, true);
+    else if (e.key === 'Escape') $('vback').click();
+  });
+
+  $('vsave').addEventListener('click', async () => {
+    const photo = slides[current];
+    if (!photo) return;
+    const file = files.get(photo.id);
+    if (file) {
+      try { await navigator.share({ files: [file] }); return; } catch (e) { if (e && e.name === 'AbortError') return; }
+    }
+    const a = document.createElement('a');
+    a.href = photo.url; a.download = 'manora-' + photo.id.slice(0, 8) + '.jpg';
+    document.body.append(a); a.click(); a.remove();
   });
 
   more.addEventListener('click', () => load().catch(() => toast('Impossible de charger la suite')));

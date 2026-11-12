@@ -9,7 +9,8 @@ L'accueil de la borne doit afficher un QR pour rejoindre la galerie en direct. L
 
 ## Décision
 
-- L'API sert une page publique **`/g/:code`** (charte Manora), sans installation : photos de l'événement en grille, mises à jour en temps réel, toucher une photo ouvre sa page de récupération (ADR 0006), bouton **« Ajouter mes photos »** pour envoyer celles du téléphone.
+- L'API sert une page publique **`/g/:code`** (charte Manora), sans installation : photos de l'événement en grille, mises à jour en temps réel, bouton **« Ajouter mes photos »** pour envoyer celles du téléphone.
+- Toucher une photo l'ouvre dans une **visionneuse plein écran** intégrée à la page : défilement horizontal au doigt (accrochage photo par photo), flèches au clavier et boutons ‹ › sur ordinateur, compteur « 3 / 12 », bouton « Enregistrer dans ma galerie » (même logique que l'ADR 0006). Le bouton ← et le geste retour du téléphone ferment la visionneuse sans quitter la galerie (`history.pushState`). Seules la photo affichée et ses voisines sont chargées en pleine définition.
 - La page consomme l'API comme l'app : jeton invité obtenu avec le code (`POST /auth/guest`, gardé dans le navigateur pour ne pas recréer un invité à chaque visite), `GET /photos` paginé, WebSocket `/ws` (`photo.created`, `photo.deleted`) avec reconnexion, `POST /photos`.
 - Les photos du téléphone sont converties en JPEG (2048 px au plus) dans le navigateur avant l'envoi : l'API n'accepte que le JPEG et l'iPhone fournit souvent du HEIC.
 - La borne obtient l'adresse par **`GET /booth/event`** (rôle `booth`) et affiche le QR sur son accueil, avec le logo Manora au centre.
