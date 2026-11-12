@@ -7,5 +7,6 @@
 | [0003](0003-ci-et-deploiement.md) | CI et déploiement | accepté |
 | [0004](0004-moteur-de-regles.md) | Moteur de règles | accepté |
 | [0005](0005-donnees-et-rgpd.md) | Données et RGPD | accepté |
+| [0006](0006-page-de-recuperation-des-photos.md) | Page publique de récupération des photos | accepté |
 
 Format : titre, statut, date, contexte, décision, conséquences. Un ADR accepté ne se réécrit pas : une nouvelle décision le remplace.
