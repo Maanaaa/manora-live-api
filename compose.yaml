@@ -1,0 +1,30 @@
+name: manora-live-api
+
+services:
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: manora-live-api
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:10015:3000"
+    environment:
+      - PORT=3000
+      - DATA_DIR=/data
+      - PUBLIC_URL=${PUBLIC_URL:-https://api.live.manora-photo.fr}
+      - CORS_ORIGINS=${CORS_ORIGINS:-}
+      - JWT_SECRET=${JWT_SECRET}
+      - RETENTION_DAYS=${RETENTION_DAYS:-30}
+      - MAX_UPLOAD_MB=${MAX_UPLOAD_MB:-15}
+      - ADMIN_EMAIL=${ADMIN_EMAIL}
+      - ADMIN_PASSWORD=${ADMIN_PASSWORD}
+      - TERMINAL_ID=${TERMINAL_ID}
+      - TERMINAL_KEY=${TERMINAL_KEY}
+      - EVENT_NAME=${EVENT_NAME}
+      - EVENT_CODE=${EVENT_CODE}
+    volumes:
+      - manora-live-data:/data
+
+volumes:
+  manora-live-data:
