@@ -128,6 +128,7 @@ const models = {
       id: { type: 'string' },
       url: { type: 'string' },
       thumbUrl: { type: 'string' },
+      pageUrl: { type: 'string' },
       source: { type: 'string', enum: ['booth', 'guest'] },
       authorName: { type: ['string', 'null'] },
       mine: { type: 'boolean' },

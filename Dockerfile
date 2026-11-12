@@ -17,6 +17,7 @@ ENV NODE_ENV=production \
 COPY package.json package-lock.json ./
 RUN npm ci --omit=dev && npm cache clean --force
 COPY --from=build /app/dist ./dist
+COPY assets ./assets
 RUN mkdir -p /data && chown node:node /data
 USER node
 VOLUME ["/data"]

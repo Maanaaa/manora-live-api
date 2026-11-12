@@ -85,6 +85,8 @@ export interface Photo {
   id: string;
   url: string;
   thumbUrl: string;
+  /** Page publique de récupération (`/p/:id`), encodée dans le QR de la borne. */
+  pageUrl: string;
   source: 'booth' | 'guest';
   authorName: string | null;
   mine: boolean;
