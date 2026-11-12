@@ -19,3 +19,7 @@
 - Toute photo existante a sa page, y compris celles prises avant cette décision.
 - La page est publique pour qui possède le lien (identifiant non devinable) : c'est le principe du QR. La suppression d'une photo rend la page introuvable.
 - Testé dans `tests/photo-page.test.ts`.
+
+## Mise à jour du 2026-11-12 — un seul bouton
+
+À la demande de Théo, la page n'a plus qu'un bouton : **« Enregistrer dans ma galerie »**. S'il est possible de partager le fichier (iPhone, Android récents), il ouvre la feuille de partage où « Enregistrer l'image » l'ajoute à Photos ; sinon il télécharge la photo (Android : visible dans la galerie). Une page web ne peut pas écrire directement dans la photothèque de l'iPhone : ce dernier toucher reste nécessaire. L'image est préparée dès l'ouverture de la page, car sur iPhone une attente réseau entre le toucher et le partage fait échouer celui-ci.

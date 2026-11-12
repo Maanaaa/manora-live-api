@@ -13,6 +13,7 @@ import { buildApp } from '../src/app.ts';
 import { bootstrap } from '../src/bootstrap.ts';
 import { loadConfig } from '../src/config.ts';
 import { openDb } from '../src/db.ts';
+import { renderGalleryPage } from '../src/routes/gallery-page.ts';
 import { renderPhotoPage } from '../src/routes/photo-page.ts';
 
 const dataDir = mkdtempSync(join(tmpdir(), 'manora-live-page-'));
@@ -70,7 +71,8 @@ describe('page de récupération', () => {
     assert.match(page.headers['content-type'] as string, /text\/html/);
     assert.equal(page.headers['x-robots-tag'], 'noindex');
     assert.ok(page.body.includes(`src="${url}"`));
-    assert.ok(page.body.includes('Télécharger la photo'));
+    assert.ok(page.body.includes('Enregistrer dans ma galerie'));
+    assert.ok(!page.body.includes('Enregistrer ou partager'), 'un seul bouton');
     assert.ok(page.body.includes('Mariage de Léa &amp; Tom'), 'nom de l’événement échappé');
   });
 
@@ -99,5 +101,38 @@ describe('page de récupération', () => {
     });
     assert.ok(!html.includes('<script>alert(1)</script>'));
     assert.ok(html.includes('12 novembre 2026'));
+  });
+});
+
+describe('galerie en direct', () => {
+  it('la borne obtient l’adresse de la galerie de l’événement en cours', async () => {
+    const res = await app.inject({ method: 'GET', url: '/booth/event', headers: { authorization: `Bearer ${boothKey}` } });
+    assert.equal(res.statusCode, 200);
+    assert.deepEqual({ name: res.json().name, galleryUrl: res.json().galleryUrl }, { name: 'Mariage de Léa & Tom', galleryUrl: 'https://api.test/g/MANORA' });
+  });
+
+  it('seule une borne peut demander l’événement en cours', async () => {
+    assert.equal((await app.inject({ method: 'GET', url: '/booth/event' })).statusCode, 401);
+  });
+
+  it('la page de galerie s’ouvre avec le code (sans tenir compte de la casse)', async () => {
+    const page = await app.inject({ method: 'GET', url: '/g/manora' });
+    assert.equal(page.statusCode, 200);
+    assert.ok(page.body.includes('La galerie en direct'));
+    assert.ok(page.body.includes('Ajouter mes photos'));
+    assert.ok(page.body.includes('Mariage de Léa &amp; Tom'));
+  });
+
+  it('un code inconnu donne une page « Galerie introuvable »', async () => {
+    const page = await app.inject({ method: 'GET', url: '/g/INCONNU' });
+    assert.equal(page.statusCode, 404);
+    assert.ok(page.body.includes('Galerie introuvable'));
+  });
+
+  it('le rendu échappe le nom et injecte le code en JSON', () => {
+    const html = renderGalleryPage('<img src=x onerror=alert(1)>', 'A"B', 'https://api.test');
+    assert.ok(!html.includes('<img src=x onerror=alert(1)>'));
+    assert.ok(html.includes('const CODE = "A\\"B"'));
+    assert.ok(!renderGalleryPage('x', '</script><b>', 'https://api.test').includes('</script><b>'));
   });
 });

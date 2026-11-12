@@ -14,7 +14,10 @@ const ASSETS: Record<string, string> = {
   'manora-logo.png': 'image/png',
 };
 
-const escape = (s: string) => s.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]!);
+export const escape = (s: string) => s.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]!);
+
+/** Valeur insérée dans un <script> : JSON, avec `<` échappé pour ne jamais fermer la balise. */
+export const jsValue = (v: unknown) => JSON.stringify(v).replace(/</g, '\\u003c');
 
 export interface PhotoPageData {
   publicUrl: string;
@@ -25,7 +28,7 @@ export interface PhotoPageData {
   fileName: string;
 }
 
-const STYLE = `
+export const STYLE = `
 @font-face{font-family:'Plus Jakarta Sans';src:url('/assets/PlusJakartaSans.woff2') format('woff2');font-weight:200 800;font-display:swap}
 :root{--ink:#132537;--muted:#475569;--terracotta:#b83a22;--terracotta-dark:#9c2e19;--cream:#fffaf1;--paper:#fffefb;--sand:#ead8bd}
 *{box-sizing:border-box}
@@ -53,9 +56,8 @@ footer{font-size:13px;line-height:1.5;color:var(--muted);text-align:center;margi
 `;
 
 const ICON_DOWNLOAD = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 21h14"/></svg>';
-const ICON_SHARE = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 15V3"/><path d="m7 8 5-5 5 5"/><path d="M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-7"/></svg>';
 
-function shell(title: string, head: string, body: string) {
+export function shell(title: string, head: string, body: string) {
   return `<!doctype html>
 <html lang="fr">
 <head>
@@ -88,41 +90,53 @@ export function renderPhotoPage(d: PhotoPageData): string {
 </div>
 <figure class="photo"><img src="${escape(d.imageUrl)}" alt="Votre photo prise à la borne Manora"></figure>
 <div class="actions">
-  <a class="btn primary" href="${escape(d.imageUrl)}" download="${escape(d.fileName)}">${ICON_DOWNLOAD}Télécharger la photo</a>
-  <button type="button" class="btn secondary" id="share" hidden>${ICON_SHARE}Enregistrer ou partager</button>
+  <a class="btn primary" id="save" href="${escape(d.imageUrl)}" download="${escape(d.fileName)}">${ICON_DOWNLOAD}Enregistrer dans ma galerie</a>
 </div>
-<p class="tip" id="tip-ios" hidden>Sur iPhone : touchez « Enregistrer ou partager », puis « Enregistrer l’image » pour l’ajouter à vos Photos. Vous pouvez aussi faire un appui long sur la photo.</p>
+<p class="tip" id="tip-ios" hidden>Sur iPhone, choisissez ensuite « Enregistrer l’image » : la photo arrive dans vos Photos.</p>
 <footer>Photo prise à la borne Manora Live. Elle est visible par les invités de l’événement ; pour la faire supprimer, adressez-vous à l’organisateur.</footer>
 </main>
 <script>
 (() => {
-  const btn = document.getElementById('share');
-  const url = ${JSON.stringify(d.imageUrl)};
-  const name = ${JSON.stringify(d.fileName)};
+  // Un seul bouton. Sur téléphone, la feuille de partage avec le fichier propose « Enregistrer l'image »
+  // (iPhone → Photos). Ailleurs, le lien télécharge le fichier (Android : visible dans la galerie).
+  // L'image est préparée dès l'ouverture : sur iPhone, attendre le réseau après le toucher bloque le partage.
+  const save = document.getElementById('save');
+  const name = ${jsValue(d.fileName)};
   if (/iPhone|iPad|iPod/.test(navigator.userAgent)) document.getElementById('tip-ios').hidden = false;
-  if (!navigator.share) return;
-  btn.hidden = false;
-  btn.addEventListener('click', async () => {
+  let file = null;
+  fetch(${jsValue(d.imageUrl)})
+    .then((r) => r.blob())
+    .then((blob) => {
+      const f = new File([blob], name, { type: 'image/jpeg' });
+      if (navigator.canShare && navigator.canShare({ files: [f] })) file = f;
+    })
+    .catch(() => {});
+  save.addEventListener('click', async (event) => {
+    if (!file) return; // pas de partage de fichier : le lien télécharge la photo
+    event.preventDefault();
     try {
-      const blob = await (await fetch(url)).blob();
-      const file = new File([blob], name, { type: 'image/jpeg' });
-      if (navigator.canShare && navigator.canShare({ files: [file] })) await navigator.share({ files: [file], title: 'Ma photo Manora' });
-      else await navigator.share({ url: location.href, title: 'Ma photo Manora' });
-    } catch (e) { /* partage annulé */ }
+      await navigator.share({ files: [file] });
+    } catch (e) {
+      if (e && e.name !== 'AbortError') location.href = save.href;
+    }
   });
 })();
 </script>`;
   return shell(`Votre photo — ${d.eventName ?? 'Manora Live'}`, head, body);
 }
 
-export function renderMissingPage(): string {
+export function renderMissingPage(
+  title = 'Photo introuvable',
+  text = 'Elle a peut-être été supprimée, ou le lien est incomplet.',
+  tip = 'Rapprochez-vous de la borne pour reprendre une photo, ou demandez le lien à l’organisateur.',
+): string {
   return shell(
-    'Photo introuvable — Manora Live',
+    `${title} — Manora Live`,
     '',
     `<main>
 <header><img src="/assets/manora-logo.png" alt="Manora Photobooth"><span class="badge">Manora Live</span></header>
-<div><h1>Photo introuvable</h1><p class="meta">Elle a peut-être été supprimée, ou le lien est incomplet.</p></div>
-<p class="tip">Rapprochez-vous de la borne pour reprendre une photo, ou demandez le lien à l’organisateur.</p>
+<div><h1>${escape(title)}</h1><p class="meta">${escape(text)}</p></div>
+<p class="tip">${escape(tip)}</p>
 </main>`,
   );
 }
