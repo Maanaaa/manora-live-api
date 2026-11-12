@@ -118,6 +118,14 @@ Photo = { id, url, thumbUrl, pageUrl, source: 'booth' | 'guest', authorName: str
 
 `url` est l'adresse publique de l'image JPEG elle-même : elle sert à l'affichage plein écran et à l'enregistrement sur le téléphone. `pageUrl` (`/p/:id`) est la page publique de récupération (photo, boutons Télécharger et Enregistrer / partager) : c'est elle qui est encodée dans le QR de la borne. `thumbUrl` est une miniature (côté long 480 px).
 
+### Pages publiques (web, sans app)
+
+| Méthode | Route | Rôle | Accès |
+| --- | --- | --- | --- |
+| GET | `/p/:id` | Page de récupération d'une photo (`pageUrl`), encodée dans le QR de fin de photo | public |
+| GET | `/g/:code` | Galerie en direct de l'événement : photos en temps réel, ajout de photos ; elle utilise `POST /auth/guest`, `GET /photos`, `/ws` et `POST /photos` | public |
+| GET | `/booth/event` | `{ id, name, code, galleryUrl }` de l'événement en cours, pour le QR de la galerie sur l'accueil de la borne | booth |
+
 ### Clés d'API des bornes
 
 | Méthode | Route | Réponse | Accès |

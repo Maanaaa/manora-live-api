@@ -14,7 +14,10 @@ const ASSETS: Record<string, string> = {
   'manora-logo.png': 'image/png',
 };
 
-const escape = (s: string) => s.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]!);
+export const escape = (s: string) => s.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]!);
+
+/** Valeur insérée dans un <script> : JSON, avec `<` échappé pour ne jamais fermer la balise. */
+export const jsValue = (v: unknown) => JSON.stringify(v).replace(/</g, '\\u003c');
 
 export interface PhotoPageData {
   publicUrl: string;
@@ -25,7 +28,7 @@ export interface PhotoPageData {
   fileName: string;
 }
 
-const STYLE = `
+export const STYLE = `
 @font-face{font-family:'Plus Jakarta Sans';src:url('/assets/PlusJakartaSans.woff2') format('woff2');font-weight:200 800;font-display:swap}
 :root{--ink:#132537;--muted:#475569;--terracotta:#b83a22;--terracotta-dark:#9c2e19;--cream:#fffaf1;--paper:#fffefb;--sand:#ead8bd}
 *{box-sizing:border-box}
@@ -54,7 +57,7 @@ footer{font-size:13px;line-height:1.5;color:var(--muted);text-align:center;margi
 
 const ICON_DOWNLOAD = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 21h14"/></svg>';
 
-function shell(title: string, head: string, body: string) {
+export function shell(title: string, head: string, body: string) {
   return `<!doctype html>
 <html lang="fr">
 <head>
@@ -98,10 +101,10 @@ export function renderPhotoPage(d: PhotoPageData): string {
   // (iPhone → Photos). Ailleurs, le lien télécharge le fichier (Android : visible dans la galerie).
   // L'image est préparée dès l'ouverture : sur iPhone, attendre le réseau après le toucher bloque le partage.
   const save = document.getElementById('save');
-  const name = ${JSON.stringify(d.fileName)};
+  const name = ${jsValue(d.fileName)};
   if (/iPhone|iPad|iPod/.test(navigator.userAgent)) document.getElementById('tip-ios').hidden = false;
   let file = null;
-  fetch(${JSON.stringify(d.imageUrl)})
+  fetch(${jsValue(d.imageUrl)})
     .then((r) => r.blob())
     .then((blob) => {
       const f = new File([blob], name, { type: 'image/jpeg' });
@@ -122,14 +125,18 @@ export function renderPhotoPage(d: PhotoPageData): string {
   return shell(`Votre photo — ${d.eventName ?? 'Manora Live'}`, head, body);
 }
 
-export function renderMissingPage(): string {
+export function renderMissingPage(
+  title = 'Photo introuvable',
+  text = 'Elle a peut-être été supprimée, ou le lien est incomplet.',
+  tip = 'Rapprochez-vous de la borne pour reprendre une photo, ou demandez le lien à l’organisateur.',
+): string {
   return shell(
-    'Photo introuvable — Manora Live',
+    `${title} — Manora Live`,
     '',
     `<main>
 <header><img src="/assets/manora-logo.png" alt="Manora Photobooth"><span class="badge">Manora Live</span></header>
-<div><h1>Photo introuvable</h1><p class="meta">Elle a peut-être été supprimée, ou le lien est incomplet.</p></div>
-<p class="tip">Rapprochez-vous de la borne pour reprendre une photo, ou demandez le lien à l’organisateur.</p>
+<div><h1>${escape(title)}</h1><p class="meta">${escape(text)}</p></div>
+<p class="tip">${escape(tip)}</p>
 </main>`,
   );
 }
