@@ -9,5 +9,6 @@
 | [0005](0005-donnees-et-rgpd.md) | Données et RGPD | accepté |
 | [0006](0006-page-de-recuperation-des-photos.md) | Page publique de récupération des photos | accepté |
 | [0007](0007-galerie-en-direct-web.md) | Galerie en direct sur le web | accepté |
+| [0008](0008-notifications-nouvelles-photos.md) | Notifications « nouvelles photos dans la galerie » | accepté |
 
 Format : titre, statut, date, contexte, décision, conséquences. Un ADR accepté ne se réécrit pas : une nouvelle décision le remplace.

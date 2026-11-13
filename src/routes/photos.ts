@@ -19,7 +19,7 @@ const PAGE_SIZE = 30;
 
 type Row = Record<string, unknown>;
 
-export function photosRoutes(app: FastifyInstance, { db, config, hub }: Ctx) {
+export function photosRoutes(app: FastifyInstance, { db, config, hub, photoNotifier }: Ctx) {
   const dirs = { photos: join(config.dataDir, 'photos'), thumbs: join(config.dataDir, 'photos', 'thumbs') };
   mkdirSync(dirs.thumbs, { recursive: true });
 
@@ -125,6 +125,7 @@ export function photosRoutes(app: FastifyInstance, { db, config, hub }: Ctx) {
         'host',
         'admin',
       ]);
+      photoNotifier.photoAdded(eventId, author.id);
       const photo = toPhoto(row, author);
       return { id, url: photo.url, pageUrl: photo.pageUrl };
     },
