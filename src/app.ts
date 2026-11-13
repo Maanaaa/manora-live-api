@@ -14,6 +14,7 @@ import type { Ctx } from './context.ts';
 import { openDb, type Db } from './db.ts';
 import { HttpError } from './errors.ts';
 import { Fleet } from './fleet.ts';
+import { PhotoNotifier } from './photo-notifier.ts';
 import { expoPush, type PushSender } from './push.ts';
 import { Hub } from './realtime.ts';
 import { authRoutes } from './routes/auth.ts';
@@ -58,7 +59,13 @@ export async function buildApp(config: Config, options: BuildOptions = {}) {
   const db = options.db ?? openDb(config.dataDir);
   const hub = new Hub();
   const fleet = new Fleet({ db, hub, push: options.push ?? expoPush, log: app.log });
-  const ctx: Ctx = { config, db, hub, fleet };
+  const photoNotifier = new PhotoNotifier({
+    db,
+    send: options.push ?? expoPush,
+    onError: (err) => app.log.error(err, 'Échec de la notification « nouvelles photos »'),
+  });
+  app.addHook('onClose', async () => photoNotifier.stop());
+  const ctx: Ctx = { config, db, hub, fleet, photoNotifier };
 
   app.setErrorHandler((error: FastifyError, request, reply) => {
     if (error.validation) return reply.code(400).send({ error: `Requête invalide : ${error.message}` });
